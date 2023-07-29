@@ -62,7 +62,10 @@ async function createTree(page, maximumDepth) {
   const title = await page.title();
   const privacyPolicyURL = await retrievePrivacyPolicy(page);
 
-  const tree = new utils.tree({ title: title, privacyPolicyURL: privacyPolicyURL });
+  const tree = new utils.tree({
+    title: title,
+    privacyPolicyURL: privacyPolicyURL,
+  });
   visited.add(privacyPolicyURL);
 
   /**
@@ -91,12 +94,15 @@ async function createTree(page, maximumDepth) {
         continue;
       }
 
-      const subtree = new utils.tree({ title: title, privacyPolicyURL: privacyPolicyURL });
+      const subtree = new utils.tree({
+        title: title,
+        privacyPolicyURL: privacyPolicyURL,
+      });
       tree.push(subtree);
 
       visited.add(privacyPolicyURL);
 
-      await openNeighboringLinks(page, depth = depth + 1);
+      await openNeighboringLinks(page, (depth = depth + 1));
     }
   }
 
@@ -142,7 +148,7 @@ async function transcribe(nodes) {
 
   const corpusPath = path.join('files', 'corpus.csv');
   await fs.promises
-    .writeFile(corpusPath, data, { encoding: 'utf8', flag: 'w'})
+    .writeFile(corpusPath, data, { encoding: 'utf8', flag: 'w' })
     .then(() => console.log('Check files/ for the result'))
     .catch(() => console.error(err));
 }
