@@ -21,10 +21,17 @@ const visited = new Set();
  */
 async function retrievePrivacyPolicy(page) {
   const seeDetails = await page.$x('//span[text()="See details"]');
+  if (seeDetails.length === 0) {
+    return null;
+  }
+
   await seeDetails[0].click();
   await page.waitForTimeout(2000);
 
   const privacyPolicy = await page.$x('//a[text()="privacy policy"]');
+  if (privacyPolicy.length === 0) {
+    return null;
+  }
   const href = await (await privacyPolicy[0].getProperty('href')).jsonValue();
 
   return href;
@@ -40,6 +47,10 @@ async function getSimilarApps(page) {
   const similar = await page.$x(
     '//span[text()="Similar games" or text()="Similar apps"]/../../../../..//a[contains(@href, "/store/apps/details?id")]'
   );
+
+  if (similar.length === 0) {
+    return [];
+  }
 
   const hrefs = await Promise.all(
     similar.map(
@@ -66,6 +77,7 @@ async function createTree(page, maximumDepth) {
     title: title,
     privacyPolicyURL: privacyPolicyURL,
   });
+
   visited.add(privacyPolicyURL);
 
   /**
@@ -77,12 +89,12 @@ async function createTree(page, maximumDepth) {
    * @return {Object}
    */
   async function openNeighboringLinks(page, depth = 0) {
-    if (maximumDepth < depth) {
+    if (Number(maximumDepth) < depth) {
       return;
     }
 
     const URLs = await getSimilarApps(page);
-    for (const [child, URL] of URLs.entries()) {
+    for (const URL of Object.values(URLs)) {
       await page.goto(URL, {
         waitUntil: 'networkidle2',
       });
@@ -94,13 +106,15 @@ async function createTree(page, maximumDepth) {
         continue;
       }
 
-      const subtree = new utils.tree({
-        title: title,
-        privacyPolicyURL: privacyPolicyURL,
-      });
-      tree.push(subtree);
+      if (privacyPolicyURL !== null) {
+        const subtree = new utils.tree({
+          title: title,
+          privacyPolicyURL: privacyPolicyURL,
+        });
+        tree.push(subtree);
 
-      visited.add(privacyPolicyURL);
+        visited.add(privacyPolicyURL);
+      }
 
       await openNeighboringLinks(page, (depth = depth + 1));
     }
@@ -125,7 +139,10 @@ function collectNodes(tree) {
    * @param {Object} subtree 'Tree' object
    */
   function dfs(subtree) {
-    nodes.push(subtree.node);
+    if (subtree.node.privacyPolicyURL !== null) {
+      nodes.push(subtree.node);
+    }
+
     if (subtree.children.length !== 0) {
       for (const child of subtree.children) {
         dfs(child);
@@ -149,7 +166,7 @@ async function transcribe(nodes) {
   const corpusPath = path.join('files', 'corpus.csv');
   await fs.promises
     .writeFile(corpusPath, data, { encoding: 'utf8', flag: 'w' })
-    .then(() => console.log('Check files/ for the result'))
+    .then(() => console.log('Please see files/corpus.csv for your results'))
     .catch(() => console.error(err));
 }
 
@@ -182,13 +199,14 @@ async function routine(debug = false) {
 
     const page = await browser.newPage();
 
-    const root = process.argv[2];
+    const args = process.argv.slice(2);
+    const [root, maximumDepth] = args;
+
     await page.goto(root, {
       waitUntil: 'networkidle2',
     });
     await page.bringToFront();
 
-    const maximumDepth = Number(process.argv[3]);
     const tree = await createTree(page, maximumDepth);
 
     const nodes = collectNodes(tree);
