@@ -14,11 +14,29 @@ const utils = require('../utils/tree');
 const visited = new Set();
 
 /**
- * Retrieves the URLs of appsin the "Similar games" and "Similar apps" section
+ * Extracts the URL of an app developer's privacy policy
  * @param {Object} page Puppeteer page instance
+ *
+ * @return {string}
+ */
+async function retrievePrivacyPolicy(page) {
+  const seeDetails = await page.$x('//span[text()="See details"]');
+  await seeDetails[0].click();
+  await page.waitForTimeout(2000);
+
+  const privacyPolicy = await page.$x('//a[text()="privacy policy"]');
+  const href = await (await privacyPolicy[0].getProperty('href')).jsonValue();
+
+  return href;
+}
+
+/**
+ * Retrieves the URLs of apps in the "Similar games" and "Similar apps" section
+ * @param {Object} page Puppeteer page instance
+ *
  * @return {Array}
  */
-async function getSimilarItems(page) {
+async function getSimilarApps(page) {
   const similar = await page.$x(
     '//span[text()="Similar games" or text()="Similar apps"]/../../../../..//a[contains(@href, "/store/apps/details?id")]'
   );
@@ -34,62 +52,67 @@ async function getSimilarItems(page) {
 
 /**
  * Builds a generic tree that outlines the relationships between Google Play
- * Store apps
+ * apps
  * @param {Object} page Puppeteer page instance
  * @param {Number} maximumDepth Maximum size of the resultant 'Tree' object
+ *
  * @return {Object}
  */
 async function createTree(page, maximumDepth) {
-  const [title, url] = [await page.title(), await page.url()];
-  const node = { title: title, url: url };
+  const title = await page.title();
+  const privacyPolicyURL = await retrievePrivacyPolicy(page);
 
-  const tree = new utils.tree(node);
-  visited.add(url);
+  const tree = new utils.tree({ title: title, privacyPolicyURL: privacyPolicyURL });
+  visited.add(privacyPolicyURL);
 
-  await openNeighboringLinks(page, tree);
   /**
-   * Opens the URLs of apps in the "Similar games" and "Similar apps" section
+   * Searches the URLs of apps in the "Similar games" and "Similar apps"
+   * section for their privacy policies
    * @param {Object} page Puppeteer page instance
-   * @param {Object} tree 'Tree' object
    * @param {Number} depth Current level
+   *
+   * @return {Object}
    */
-  async function openNeighboringLinks(page, tree, depth = 0) {
+  async function openNeighboringLinks(page, depth = 0) {
     if (maximumDepth < depth) {
       return;
     }
 
-    const hrefs = await getSimilarItems(page);
-    for (const [child, href] of hrefs.entries()) {
-      await page.goto(href, {
+    const URLs = await getSimilarApps(page);
+    for (const [child, URL] of URLs.entries()) {
+      await page.goto(URL, {
         waitUntil: 'networkidle2',
       });
 
-      const [title, url] = [await page.title(), await page.url()];
-      if (visited.has(url)) {
+      const title = await page.title();
+      const privacyPolicyURL = await retrievePrivacyPolicy(page);
+
+      if (visited.has(privacyPolicyURL)) {
         continue;
       }
 
-      visited.add(url);
-      const node = { title: title, url: url };
-
-      const subtree = new utils.tree(node);
+      const subtree = new utils.tree({ title: title, privacyPolicyURL: privacyPolicyURL });
       tree.push(subtree);
 
-      await openNeighboringLinks(page, tree, depth = depth + 1);
+      visited.add(privacyPolicyURL);
+
+      await openNeighboringLinks(page, depth = depth + 1);
     }
   }
+
+  await openNeighboringLinks(page);
 
   return tree;
 }
 
 /**
- * Traverses through a generic tree and collects the nodes
+ * Performs depth-first search on a generic tree
  * @param {Object} tree 'Tree' object
+ *
  * @return {Array}
  */
 function collectNodes(tree) {
   const nodes = [];
-  dfs(tree);
 
   /**
    * Depth-first search
@@ -104,29 +127,30 @@ function collectNodes(tree) {
     }
   }
 
+  dfs(tree);
+
   return nodes;
 }
 
 /**
- * Saves the result of the web scrape into a comma-separated values file
- * @param {Array} nodes Array of 'Tree' object nodes
- *
- * Side-effect: Creates a comma-separated values named 'corpus.csv'
+ * Stores the result of the web scrape into a comma-separated values file
+ * @param {Array} nodes Array of 'Node' objects
  */
-async function transcribeNodes(nodes) {
-  const rows = nodes.map((node) => node.title + ',' + node.url);
+async function transcribe(nodes) {
+  const rows = nodes.map((node) => node.title + ',' + node.privacyPolicyURL);
   const data = rows.join('\n');
 
   const corpusPath = path.join('files', 'corpus.csv');
   await fs.promises
     .writeFile(corpusPath, data, { encoding: 'utf8', flag: 'w'})
-    .then(() => console.log('See files/ for the result'))
+    .then(() => console.log('Check files/ for the result'))
     .catch(() => console.error(err));
 }
 
 /**
- * Collects related developer privacy policies from the Google Play Store
- * @param {boolean} [debug=false] Launches browser in headful mode with web
+ * Collects developer privacy policies from the Google Play Store using a
+ * tree-like traversal
+ * @param {boolean} [debug=true]  Launches browser in headful mode with web
  *                                developer tools open
  *
  * Main point of entry for 'crawler.js'
@@ -151,10 +175,6 @@ async function routine(debug = false) {
     });
 
     const page = await browser.newPage();
-    await page.setViewport({
-      width: 1366,
-      height: 768,
-    });
 
     const root = process.argv[2];
     await page.goto(root, {
@@ -166,7 +186,7 @@ async function routine(debug = false) {
     const tree = await createTree(page, maximumDepth);
 
     const nodes = collectNodes(tree);
-    await transcribeNodes(nodes);
+    await transcribe(nodes);
 
     await browser.close();
   } catch (err) {
