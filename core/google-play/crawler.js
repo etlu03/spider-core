@@ -10,7 +10,7 @@ const fs = require('fs');
 const process = require('process');
 const path = require('path');
 
-const utils = require('../utils/tree');
+const utils = require('../../utils/tree');
 const visited = new Set();
 
 /**
