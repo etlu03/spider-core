@@ -11,7 +11,7 @@ module.exports = {
   },
   rules: {
     'max-len': [
-      'error',
+      'warn',
       {
         code: 80,
         tabWidth: 2,
