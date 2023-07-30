@@ -14,5 +14,5 @@ The main routine of spider-core requires two command-line arguments: url, the ro
 
 ```shell
 # example
-> node core/crawler.js "https://play.google.com/store/apps/details?id=com.chess&hl=en_US&gl=US" 2
+> node core/google-play/crawler.js "https://play.google.com/store/apps/details?id=com.chess&hl=en_US&gl=US" 2
 ```
