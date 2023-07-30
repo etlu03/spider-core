@@ -218,4 +218,4 @@ async function routine(debug = false) {
   }
 }
 
-routine(debug = true);
+routine((debug = true));
