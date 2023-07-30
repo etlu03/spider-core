@@ -69,7 +69,7 @@ async function createTree(page, maximumDepth) {
   const privacyPolicyURL = await retrievePrivacyPolicy(page);
 
   const tree = new utils.tree({
-    title: title,
+    title: title.replace(' on the App Store', ''),
     privacyPolicyURL: privacyPolicyURL,
   });
 
@@ -103,7 +103,7 @@ async function createTree(page, maximumDepth) {
 
       if (privacyPolicyURL !== null) {
         const subtree = new utils.tree({
-          title: title,
+          title: title.replace(' on the App Store', ''),
           privacyPolicyURL: privacyPolicyURL,
         });
         tree.push(subtree);
