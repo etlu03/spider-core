@@ -182,9 +182,15 @@ async function routine(debug = false) {
   if (debug) console.log("Running 'crawler.js' in debug mode...");
   const argc = process.argv.length;
   try {
-    if (argc !== 4) {
+    if (argc < 3) {
       throw new TypeError(
-        `Incorrect number of arguments. Expected 4, recieved ${argc}`
+        `Incorrect number of arguments. Expected at least 3, recieved ${argc}`
+      );
+    }
+
+    if (4 < argc) {
+      throw new TypeError(
+        `Incorrect number of arguments. Expected at most 4, recieved ${argc}`
       );
     }
 
@@ -196,20 +202,17 @@ async function routine(debug = false) {
       },
       headless: !debug,
     });
-
     const page = await browser.newPage();
 
-    const args = process.argv.slice(2);
-    const [root, maximumDepth] = args;
-
-    await page.goto(root, {
+    await page.goto(process.argv[2], {
       waitUntil: 'networkidle2',
     });
     await page.bringToFront();
 
+    const maximumDepth = isNaN(process.argv[3]) ? -1 : Number(process.argv[3]);
     const tree = await createTree(page, maximumDepth);
-
     const nodes = collectNodes(tree);
+
     await transcribe(nodes);
 
     await browser.close();
