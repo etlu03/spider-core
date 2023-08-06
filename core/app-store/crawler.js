@@ -1,5 +1,5 @@
 /**
- * @fileoverview Main routine of 'spider-core'
+ * @fileoverview Main routine of Apple App Store web crawler
  *
  * Requirements Engineering Lab at Carnegie Mellon University
  * @release 2023
