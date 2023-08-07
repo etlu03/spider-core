@@ -1,5 +1,5 @@
 # Developer privacy policy URL scraper
-This repository contains the source code of two app marketplae web crawlers, the Gooogle Play Store and the Apple App Store. The web crawler searches for the current developer's privacy policy and moves using tree-like traversal to other neighboring apps. When the web crawler finishes the scraping routine, a file called **corpus.csv** will contain all the found URLs to developer privacy policies.
+This repository contains the source code of two app marketplace web crawlers, the Gooogle Play Store and the Apple App Store. The web crawler searches for the current developer's privacy policy and moves using tree-like traversal to other neighboring apps. When the web crawler finishes the scraping routine, a file called **corpus.csv** will contain all the found URLs to developer privacy policies.
 
 # Setup
 To use this service, you will need [Node.js](https://nodejs.org/en), which you should install beforehand. <br>
@@ -35,4 +35,4 @@ You can directly interact with the web crawlers by using ***node***, however, yo
 ```
 
 # Known Issues
-As of version 1.0.0, it is not possible to successfully run the Apple App Store web crawler on a machine that run macOS. These specific machines prompt a pop-up the ask if the user would like to open the site in the App Store application. This directly prevents these web pages from being scraped. The current fix for this issue is to run the web crawler from a Windows-based machine.
+As of version 1.0.0, it is not possible to successfully run the Apple App Store web crawler on a machine that run macOS. These specific machines prompt a pop-up that ask if the user would like to open the site in the App Store application. This directly prevents these web pages from being scraped. The current fix for this issue is to run the web crawler from a Windows-based machine.
